@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  spark-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: smart-energy-analytics:latest
+    container_name: spark-energy-app
+    volumes:
+      - ./powerconsumption.csv:/data/powerconsumption.csv:ro
+      - ./output:/output
+      - ./logs:/spark/logs
+    environment:
+      - INPUT_DATA=/data/powerconsumption.csv
+      - OUTPUT_DIR=/output/results
+      - SPARK_LOCAL_IP=127.0.0.1
+    ports:
+      - "4040:4040"
+    networks:
+      - spark-network
+
+networks:
+  spark-network:
+    driver: bridge
