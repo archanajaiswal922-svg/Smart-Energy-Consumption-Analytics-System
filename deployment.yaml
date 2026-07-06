@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: case-study7
-          image: archie650/case-study7:v2
+          image: archie650/case-study7:v1
           imagePullPolicy: IfNotPresent
 
           ports:
