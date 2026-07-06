@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -47,9 +46,8 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
-          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                     ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          docker build -t archie650/case-study7:${{ github.sha }} .
+          docker tag archie650/case-study7:${{ github.sha }} archie650/case-study7:latest
 
   docker-push:
     name: Push Docker Image
@@ -57,7 +55,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -69,14 +66,13 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
-          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                     ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          docker build -t archie650/case-study7:${{ github.sha }} .
+          docker tag archie650/case-study7:${{ github.sha }} archie650/case-study7:latest
 
       - name: Push Docker Images
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          docker push archie650/case-study7:${{ github.sha }}
+          docker push archie650/case-study7:latest
 
   deploy:
     name: Deploy to Kubernetes
@@ -84,7 +80,6 @@ jobs:
     runs-on: self-hosted
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -97,9 +92,8 @@ jobs:
       - name: Update deployment.yaml
         shell: powershell
         run: |
-          $image = "${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           (Get-Content deployment.yaml) `
-            -replace 'image:.*', "image: $image" |
+            -replace 'image:.*', 'image: archie650/case-study7:latest' |
             Set-Content deployment.yaml
 
       - name: Deploy to Kubernetes
@@ -107,9 +101,14 @@ jobs:
         run: |
           kubectl apply -f deployment.yaml
 
-      - name: Verify Deployment
+      - name: Wait for Rollout
         shell: powershell
         run: |
           kubectl rollout status deployment/case-study7
+
+      - name: Verify Deployment
+        shell: powershell
+        run: |
+          kubectl get deployments
           kubectl get pods
           kubectl get services
