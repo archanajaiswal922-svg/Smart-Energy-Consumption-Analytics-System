@@ -18,7 +18,7 @@ spec:
       containers:
       - name: case-study7
 
-        image: archie650/my-case-study7:latest
+        image: archie650/case-study7:latest
         imagePullPolicy: Always
 
         resources:
