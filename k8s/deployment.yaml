@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 apiVersion: apps/v1
 kind: Deployment
 
@@ -23,4 +24,31 @@ spec:
         imagePullPolicy: Always
 
         ports:
+=======
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: smart-energy-insights
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: smart-energy-insights
+
+  template:
+    metadata:
+      labels:
+        app: smart-energy-insights
+
+    spec:
+      containers:
+      - name: smart-energy-insights
+        image: archie650/smart-energy-insights:latest
+        imagePullPolicy: Always
+
+        ports:
+>>>>>>> b83bb8a (Add Kubernetes deployment files)
         - containerPort: 8501
