@@ -1,15 +1,11 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 
 metadata:
-  name: case-study7
+  name: case-study7-job
 
 spec:
-  replicas: 1
-
-  selector:
-    matchLabels:
-      app: case-study7
+  backoffLimit: 2
 
   template:
     metadata:
@@ -17,13 +13,13 @@ spec:
         app: case-study7
 
     spec:
+      restartPolicy: Never
+
       containers:
       - name: case-study7
+
         image: archie650/case-study7:latest
         imagePullPolicy: Always
-
-        ports:
-        - containerPort: 4040
 
         resources:
           requests:
@@ -32,21 +28,3 @@ spec:
           limits:
             cpu: "1"
             memory: "2Gi"
-
----
-apiVersion: v1
-kind: Service
-
-metadata:
-  name: case-study7-service
-
-spec:
-  selector:
-    app: case-study7
-
-  ports:
-  - protocol: TCP
-    port: 4040
-    targetPort: 4040
-
-  type: NodePort
