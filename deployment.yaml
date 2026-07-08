@@ -3,8 +3,6 @@ kind: Deployment
 
 metadata:
   name: case-study7
-  labels:
-    app: case-study7
 
 spec:
   replicas: 1
@@ -20,17 +18,35 @@ spec:
 
     spec:
       containers:
-        - name: case-study7
-          image: archie650/case-study7:v1
-          imagePullPolicy: IfNotPresent
+      - name: case-study7
+        image: archie650/case-study7:latest
+        imagePullPolicy: Always
 
-          ports:
-            - containerPort: 4040
+        ports:
+        - containerPort: 4040
 
-          resources:
-            requests:
-              cpu: "500m"
-              memory: "1Gi"
-            limits:
-              cpu: "1"
-              memory: "2Gi"
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+
+---
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: case-study7-service
+
+spec:
+  selector:
+    app: case-study7
+
+  ports:
+  - protocol: TCP
+    port: 4040
+    targetPort: 4040
+
+  type: NodePort
