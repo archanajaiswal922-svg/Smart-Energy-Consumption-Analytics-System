@@ -1,31 +1,26 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 
 metadata:
-  name: case-study7-job
+  name: smart-energy-insights
 
 spec:
-  backoffLimit: 2
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: smart-energy-insights
 
   template:
     metadata:
       labels:
-        app: case-study7
+        app: smart-energy-insights
 
     spec:
-      restartPolicy: Never
-
       containers:
-      - name: case-study7
-
-        image: archie650/case-study7:latest
+      - name: smart-energy-insights
+        image: archie650/smart-energy-insights:latest
         imagePullPolicy: Always
 
-        resources:
-          requests:
-            cpu: "500m"
-            memory: "1Gi"
-
-          limits:
-            cpu: "1"
-            memory: "2Gi"
+        ports:
+        - containerPort: 8501
