@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+  pull_request:
+    branches:
+      - main
+
 env:
   IMAGE_NAME: archie650/case-study7
 
@@ -12,13 +16,17 @@ jobs:
 
   build-test:
 
+    name: Build and Test
+
     runs-on: ubuntu-latest
 
     steps:
 
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -26,21 +34,24 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest
+
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      - name: Run Tests
+      - name: Run Unit Tests
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           if [ -d tests ]; then
             pytest
           else
-            echo "No tests found"
+            echo "No tests found."
           fi
 
   docker-push:
+
+    name: Build and Push Docker Image
 
     needs: build-test
 
@@ -48,24 +59,28 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: docker/login-action@v3
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Image
+      - name: Build Docker Image
         run: |
           docker build -t $IMAGE_NAME:${{ github.sha }} .
           docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
 
-      - name: Push Image
+      - name: Push Docker Image
         run: |
           docker push $IMAGE_NAME:${{ github.sha }}
           docker push $IMAGE_NAME:latest
 
   deploy:
+
+    name: Deploy Spark Job
 
     needs: docker-push
 
@@ -73,34 +88,50 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Check Kubernetes
+      - name: Verify Kubernetes Cluster
         shell: powershell
         run: |
           kubectl config current-context
           kubectl get nodes
 
-      - name: Update Image
+      - name: Delete Previous Job
         shell: powershell
         run: |
-          (Get-Content deployment.yaml) `
-          -replace 'image:.*','image: archie650/case-study7:latest' |
-          Set-Content deployment.yaml
+          kubectl delete job case-study7-job --ignore-not-found=true
 
-      - name: Deploy
+      - name: Wait for Previous Job Deletion
         shell: powershell
         run: |
-          kubectl apply -f deployment.yaml
+          Start-Sleep -Seconds 5
 
-      - name: Wait
+      - name: Update Kubernetes Job Image
         shell: powershell
         run: |
-          kubectl rollout status deployment/case-study7
+          (Get-Content job.yaml) `
+            -replace 'image:.*', 'image: archie650/case-study7:latest' |
+            Set-Content job.yaml
 
-      - name: Verify
+      - name: Deploy Spark Job
         shell: powershell
         run: |
-          kubectl get deployment
+          kubectl apply -f job.yaml
+
+      - name: Wait for Job Completion
+        shell: powershell
+        run: |
+          kubectl wait --for=condition=complete job/case-study7-job --timeout=900s
+
+      - name: Show Job Status
+        shell: powershell
+        run: |
+          kubectl get jobs
           kubectl get pods
-          kubectl get svc
+
+      - name: Display Spark Logs
+        shell: powershell
+        run: |
+          $pod = kubectl get pods -l job-name=case-study7-job -o jsonpath="{.items[0].metadata.name}"
+          kubectl logs $pod
