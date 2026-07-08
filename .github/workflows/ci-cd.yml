@@ -10,14 +10,12 @@ on:
       - main
 
 env:
-  IMAGE_NAME: archie650/case-study7
+  IMAGE_NAME: case-study7
 
 jobs:
 
   build-test:
-
     name: Build and Test
-
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +23,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -34,7 +32,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest
-
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
@@ -49,12 +46,15 @@ jobs:
             echo "No tests found."
           fi
 
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+                     ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
   docker-push:
-
-    name: Build and Push Docker Image
-
+    name: Push Docker Image
     needs: build-test
-
     runs-on: ubuntu-latest
 
     steps:
@@ -62,7 +62,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Login to DockerHub
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -70,20 +70,18 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t $IMAGE_NAME:${{ github.sha }} .
-          docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+                     ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Push Docker Image
+      - name: Push Docker Images
         run: |
-          docker push $IMAGE_NAME:${{ github.sha }}
-          docker push $IMAGE_NAME:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
   deploy:
-
     name: Deploy Spark Job
-
     needs: docker-push
-
     runs-on: self-hosted
 
     steps:
@@ -102,22 +100,23 @@ jobs:
         run: |
           kubectl delete job case-study7-job --ignore-not-found=true
 
-      - name: Wait for Previous Job Deletion
+      - name: Wait for Cleanup
         shell: powershell
         run: |
           Start-Sleep -Seconds 5
 
-      - name: Update Kubernetes Job Image
+      - name: Update deployment.yaml
         shell: powershell
         run: |
+          $image = "${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
           (Get-Content job.yaml) `
-            -replace 'image:.*', 'image: archie650/case-study7:latest' |
-            Set-Content job.yaml
+            -replace 'image:.*', "image: $image" |
+            Set-Content deployment.yaml
 
       - name: Deploy Spark Job
         shell: powershell
         run: |
-          kubectl apply -f job.yaml
+          kubectl apply -f deployment.yaml
 
       - name: Wait for Job Completion
         shell: powershell
